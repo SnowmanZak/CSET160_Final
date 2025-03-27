@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block body %}
+    <h1>Test Management</h1>
+
+
+    <form action="/test_page" method="POST">
+        <input type="submit" value="Create Test">
+    </form>
+
+    <h2>Existing Tests</h2>
+
+    {% for test in tests %}
+        <div>
+            <h3>Test ID: {{ test.test_id }}</h3>
+
+
+            <form action="/add_question" method="POST">
+                <input type="hidden" name="test_id" value="{{ test.test_id }}">
+                <input type="text" name="question_text" placeholder="New Question" required><br><br>
+                <input type="submit" value="Add Question">
+            </form>
+
+
+            <h4>Questions:</h4>
+            <ul>
+                {% for question in test.questions %}
+                    <li>{{ question.question_text }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endfor %}
+{% endblock %}

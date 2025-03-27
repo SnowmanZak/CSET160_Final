@@ -1,26 +1,28 @@
 create table Users (
-    user_id int primary key,
+    user_id int primary key auto_increment,
     name VARCHAR(255) not null,
     username VARCHAR(50) unique not null,
     password VARCHAR(255) not null,
     role ENUM('Teacher', 'Student') not null
+	logged_in boolean 
 );
-select * from Users;
+
+
 create table Tests (
-	test_id int primary key,
+	test_id int primary key auto_increment,
 	teacher_id int not null,
 	foreign key (teacher_id) references Users(user_id)
 );
-select * from Tests;
+
 create table Questions (
-	question_id int primary key,
+	question_id int primary key auto_increment,
 	test_id int not null,
 	question_text text not null,
 	foreign key (test_id) references Tests(test_id)
 );
-select * from Questions;
+
 create table Responses (
-	response_id int primary key,
+	response_id int primary key auto_increment,
 	student_id int not null,
 	test_id int not null,
 	question_id int not null,
@@ -30,13 +32,12 @@ create table Responses (
 	foreign key (question_id) references Questions(question_id),
 	unique(student_id, test_id)
 );
-select * from Responses;
+
 create table Results (
-	result_id int primary key,
+	result_id int primary key auto_increment,
     student_id int not null,
     test_id int not null,
     grade int check (grade >= 0),
     foreign key (student_id) references Users(user_id),
     foreign key (test_id) references Tests(test_id)
 );
-select * from Results;
