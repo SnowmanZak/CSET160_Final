@@ -18,16 +18,22 @@
           </ul>
         </div>
 
-        <div class="formSection barItem">
-          <form class="barItem" action="/login-submit" method="post">
-            <b style="display: inline; margin-right: 7px; color: red;">{{ error }}</b>
-            <input type="text" name="username" value="" placeholder="Username" required>
-            <input type="password" name="password" value="" placeholder="Password" required>
-            <input type="submit" name="loginButton" value="Login">
+        {% if logged_in_user %}
+          <p>{{ logged_in_user.username }}</p>
+          <form action="/log-out" method="POST">
+            <button type='submit'>Log out</button>
           </form>
-
-            <button><a a href="{{ url_for('sign_up') }}">Sign Up</a></button>
-        </div>
+        {% else %}
+          <div class="formSection barItem">
+            <form class="barItem" action="/login-submit" method="post">
+              <b style="display: inline; margin-right: 7px; color: red;">{{ error }}</b>
+              <input type="text" name="username" value="" placeholder="Username" required>
+              <input type="password" name="password" value="" placeholder="Password" required>
+              <input type="submit" name="loginButton" value="Login">
+            </form>
+              <button><a a href="{{ url_for('sign_up') }}">Sign Up</a></button>
+          </div>
+        {% endif %}
 
       </div>
     </header>

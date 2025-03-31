@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Test #{{ test['test_id'] }}</title>
+</head>
+<body>
+    <h1>Create Test #{{ test['test_id'] }}</h1>
+
+    <!-- Display any error messages -->
+    {% if error_message %}
+        <p style="color:red;">{{ error_message }}</p>
+    {% endif %}
+
+    <!-- Form to add a new question -->
+    <h2>Add a New Question</h2>
+    <form method="POST">
+        <div>
+            <label for="question_text">Enter Question Text:</label>
+            <textarea name="question_text" id="question_text" rows="4" required></textarea>
+        </div>
+        <button type="submit">Add Question</button>
+    </form>
+
+    <!-- Display the existing questions -->
+    <h3>Existing Questions</h3>
+    {% if questions %}
+        <ul>
+            {% for question in questions %}
+                <li>
+                    <p>{{ question['question_text'] }}</p>
+                    <!-- Link to edit the question -->
+                    <a href="{{ url_for('edit_question', question_id=question['question_id']) }}">Edit Question</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No questions added yet.</p>
+    {% endif %}
+
+    <!-- Link back to the tests page -->
+    <a href="{{ url_for('test_page') }}">Back to Tests</a>
+
+</body>
+</html>
