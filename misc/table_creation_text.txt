@@ -20,16 +20,16 @@ create table Questions (
 	foreign key (test_id) references Tests(test_id) on delete cascade
 );
 select * from Questions;
-create table Responses (
-	response_id int primary key auto_increment,
-	student_id int not null,
-	test_id int not null,
-	question_id int not null,
-	answer_text text,
-	foreign key (student_id) references Users(user_id) on delete cascade,
-	foreign key (test_id) references Tests(test_id) on delete cascade,
-	foreign key (question_id) references Questions(question_id) on delete cascade,
-	unique(student_id, test_id)
+CREATE TABLE Responses (
+    response_id INT PRIMARY KEY AUTO_INCREMENT,
+    student_id INT NOT NULL,
+    test_id INT NOT NULL,
+    question_id INT NOT NULL,
+    answer_text TEXT,
+    FOREIGN KEY (student_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (test_id) REFERENCES Tests(test_id) ON DELETE CASCADE,
+    FOREIGN KEY (question_id) REFERENCES Questions(question_id) ON DELETE CASCADE,
+    UNIQUE(student_id, test_id, question_id)
 );
 select * from Responses;
 create table Results (

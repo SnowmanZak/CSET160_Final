@@ -1,0 +1,15 @@
+{%extends 'base.html'%}
+
+{% block body %}
+    {% if tests and user %}
+        {% for test in tests %}
+            <a href="{{ url_for('give_grade', test_id=test.test_id) }}" >{{ test }}</a>
+
+        {% endfor %}
+
+
+    {% elif student_grade %}
+
+{% endif %}
+
+{% endblock %}

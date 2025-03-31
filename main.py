@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, flash
 from sqlalchemy import create_engine, text
 
 app = Flask(__name__)
@@ -154,7 +154,7 @@ def test_page():
 
         return render_template('tests.html', tests=tests, user=user)
 
-    return redirect(url_for('home'))
+    return redirect(url_for('index'))
 
 
 
@@ -236,7 +236,6 @@ def edit_question(question_id):
 
 
 
-import json
 
 @app.route('/take_test/<int:test_id>', methods=['GET', 'POST'])
 def take_test(test_id):
@@ -245,7 +244,40 @@ def take_test(test_id):
     if not user or user['role'] != 'Student':
         return redirect(url_for('index'))
 
-    with engine.begin() as conn:  
+    with engine.connect() as conn:
+        # Check if the student has already taken the test
+        existing_response = conn.execute(
+            text("SELECT 1 FROM Responses WHERE student_id = :student_id AND test_id = :test_id"),
+            {'student_id': user['user_id'], 'test_id': test_id}
+        ).fetchone()
+
+        if existing_response:
+            return redirect(url_for('test_page', message="You have already taken this test."))
+
+        # Fetch questions for the test
+        questions = conn.execute(
+            text("SELECT * FROM Questions WHERE test_id = :test_id"),
+            {'test_id': test_id}
+        ).fetchall()
+
+        # Fetch the test details (e.g., test name, description)
+        test = conn.execute(
+            text("SELECT * FROM Tests WHERE test_id = :test_id"),
+            {'test_id': test_id}
+        ).fetchone()
+
+    return render_template('take_test.html', test=test, questions=questions, user=user)
+
+
+
+@app.route('/submit_test/<int:test_id>', methods=['POST'])
+def submit_test(test_id):
+    user = get_logged_in_user()
+
+    if not user or user['role'] != 'Student':  
+        return redirect(url_for('index'))
+
+    with engine.connect() as conn:
         test = conn.execute(
             text("SELECT * FROM Tests WHERE test_id = :test_id"),
             {'test_id': test_id}
@@ -259,54 +291,100 @@ def take_test(test_id):
             {'test_id': test_id}
         ).mappings().all()
 
-        print(f"DEBUG: Rendering take_test.html with {len(questions)} questions")
-
-    return render_template('take_test.html', test=test, questions=questions)
-
-
-
-@app.route('/submit_test/<int:test_id>', methods=['POST'])
-def submit_test(test_id):
-    user = get_logged_in_user()
-
-    if not user or user['role'] != 'Student':  
-        return redirect(url_for('index'))  # Ensure only students can submit tests
-
-    with engine.connect() as conn:
-        # Retrieve the test to ensure it exists
-        test = conn.execute(
-            text("SELECT * FROM Tests WHERE test_id = :test_id"), {'test_id': test_id}
-        ).mappings().first()
-
-        if not test:
-            return redirect(url_for('test_page'))
-
-        # Fetch all questions for this test
-        questions = conn.execute(
-            text("SELECT * FROM Questions WHERE test_id = :test_id"),
-            {'test_id': test_id}
-        ).mappings().all()
-
-        # Store responses
         for question in questions:
-            answer_text = request.form.get(f'answer_{question["question_id"]}', '').strip()
+            answer_text = request.form.get(f'answer_{question['question_id']}', '').strip()
 
-            conn.execute(
+            existing_response = conn.execute(
                 text("""
-                    INSERT INTO Responses (student_id, test_id, question_id, answer_text) 
-                    VALUES (:student_id, :test_id, :question_id, :answer_text)
+                    SELECT * FROM Responses 
+                    WHERE student_id = :student_id 
+                    AND test_id = :test_id 
+                    AND question_id = :question_id
                 """),
                 {
                     'student_id': user['user_id'],
                     'test_id': test_id,
-                    'question_id': question['question_id'],
-                    'answer_text': answer_text
+                    'question_id': question['question_id']
                 }
-            )
+            ).mappings().first()
+
+            if existing_response:
+                conn.execute(
+                    text("""
+                        UPDATE Responses 
+                        SET answer_text = :answer_text 
+                        WHERE student_id = :student_id 
+                        AND test_id = :test_id 
+                        AND question_id = :question_id
+                    """),
+                    {
+                        'answer_text': answer_text,
+                        'student_id': user['user_id'],
+                        'test_id': test_id,
+                        'question_id': question['question_id']
+                    }
+                )
+            else:
+                conn.execute(
+                    text("""
+                        INSERT INTO Responses (student_id, test_id, question_id, answer_text) 
+                        VALUES (:student_id, :test_id, :question_id, :answer_text)
+                    """),
+                    {
+                        'student_id': user['user_id'],
+                        'test_id': test_id,
+                        'question_id': question['question_id'],
+                        'answer_text': answer_text
+                    }
+                )
 
         conn.commit()
 
-    return redirect(url_for('test_page'))  # Redirect after submission
+    return redirect(url_for('test_page')) 
+
+@app.route('/grade', methods=['GET', 'POST'])
+def test_grade():
+    user = get_logged_in_user()
+    
+    if user['role'] == 'Teacher':
+        with engine.connect() as conn:
+            tests = conn.execute(
+                text('SELECT * FROM Tests WHERE teacher_id = :teacher_id'),
+                {'teacher_id': user['user_id']}
+            ).mappings().all()
+              
+        return render_template('grades.html', tests=tests, user=user)  
+    
+    elif user['role'] == 'Student':
+        with engine.connect() as conn:
+            student_grade = conn.execute(
+                text('SELECT * FROM grades WHERE student_id = :student_id'),
+                {'student_id': user['user_id']}
+            ).mappings().all()
+            
+        return render_template('grades.html', student_grade=student_grade)
+    
+    elif not user:
+        return render_template('grades.html', test='You must log in')
+    
+    else:
+        return render_template('grades.html', test='An error occured')
+                
+
+@app.route('/give-grade', methods=['GET', 'POST'])
+def give_grade():
+    user = get_logged_in_user()
+    test_id = request.args.get('test_id')  
+    
+    with engine.connect() as conn:
+        responses = conn.execute(
+            text('SELECT * FROM responses WHERE test_id = :test_id ORDER BY student_id'),
+            {'test_id': test_id, 'student_id': user['user_id']}
+        ).mappings().all()
+        
+        
+        return render_template('give_grades.html', responses=responses)
+    
 
 
 
