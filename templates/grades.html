@@ -3,41 +3,43 @@
 {% block body %}
     <h1>Your Grades</h1>
 
-    {% if student_grades %}
-        <table class="grades-table">
-            <thead>
-                <tr>
-                    <th style="text-align: left;">Test</th>
-                    <th style="text-align: left;">Question</th>
-                    <th style="text-align: left;">Your Answer</th>
-                    <th style="text-align: left;">Grade</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% set current_test = None %}
-                
-                {% for entry in student_grades %}
-                    {% if entry.test_id != current_test %}
-                        {% if current_test is not none %}
-                            </tr>  <!-- End previous test rows -->
-                        {% endif %}
-                        {% set current_test = entry.test_id %}
-                    {% endif %}
-                    
-                    <!-- Add test name in the first column -->
-                    <tr>
-                        <td>{{ entry.test_id }}</td>
-                        <td>{{ entry.question_text }}</td>
-                        <td>{{ entry.answer_text }}</td>
-                        <td>{{ entry.grade if entry.grade is not none else "Not Graded" }}</td>
-                    </tr>
+    {% if user.role == 'Teacher' %}
+        <!-- Teacher view: show list of tests to grade -->
+        <h2>Tests to Grade</h2>
+        {% if tests %}
+            <ul>
+                {% for test in tests %}
+                    <li><a href="{{ url_for('give_grade', test_id=test.test_id) }}">{{ test.test_id }}</a></li>
                 {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p>No grades available yet.</p>
+            </ul>
+        {% else %}
+            <p>No tests to grade yet.</p>
+        {% endif %}
+    {% elif user.role == 'Student' %}
+        <!-- Student view: show grades for the logged-in student -->
+        {% if student_grades %}
+            <table>
+                <thead>
+                    <tr>
+                        <th style="text-align: left;">Test</th>
+                        <th style="text-align: left;">Question</th>
+                        <th style="text-align: left;">Your Answer</th>
+                        <th style="text-align: left;">Grade</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in student_grades %}
+                        <tr>
+                            <td>{{ entry.test_id }}</td>
+                            <td>{{ entry.question_text }}</td>
+                            <td>{{ entry.answer_text }}</td>
+                            <td>{{ entry.grade if entry.grade is not none else "Not Graded" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No grades available yet.</p>
+        {% endif %}
     {% endif %}
 {% endblock %}
-
-
-

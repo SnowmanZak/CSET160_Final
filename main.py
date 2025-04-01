@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for
 from sqlalchemy import create_engine, text
 
 app = Flask(__name__)
@@ -350,9 +350,10 @@ def view_grades():
         return render_template('grades.html', message='You must log in')
 
     with engine.connect() as conn:
+        # Teacher view: show all tests to grade
         if user['role'] == 'Teacher':
             tests = conn.execute(
-                text("""
+                text(""" 
                     SELECT * FROM Tests WHERE teacher_id = :teacher_id
                 """),
                 {'teacher_id': user['user_id']}
@@ -360,26 +361,25 @@ def view_grades():
             
             return render_template('grades.html', tests=tests, user=user)
 
+        # Student view: show grades for the logged-in student
         elif user['role'] == 'Student':
             student_grades = conn.execute(
                 text("""
-                    SELECT Tests.test_id, Tests.test_id, Questions.question_text, Responses.question_id, 
-                           Responses.answer_text, Results.grade
+                    SELECT Tests.test_id, Questions.question_text, Responses.answer_text, Results.grade
                     FROM Responses
                     JOIN Tests ON Responses.test_id = Tests.test_id
                     JOIN Questions ON Responses.question_id = Questions.question_id
                     LEFT JOIN Results ON Responses.student_id = Results.student_id 
-                                     AND Responses.test_id = Results.test_id
+                                       AND Responses.test_id = Results.test_id
                     WHERE Responses.student_id = :student_id
                     ORDER BY Tests.test_id, Responses.question_id
                 """),
                 {'student_id': user['user_id']}
             ).mappings().all()
             
-            return render_template('grades.html', student_grades=student_grades)
+            return render_template('grades.html', student_grades=student_grades, user=user)
 
     return render_template('grades.html', message="An error occurred")
-
 
 
 @app.route('/give-grade', methods=['GET', 'POST'])
@@ -394,6 +394,7 @@ def give_grade():
         return "No test ID provided", 400
 
     with engine.connect() as conn:
+        # Fetch all responses for a specific test
         responses = conn.execute(
             text("""
                 SELECT Responses.student_id, Responses.test_id, Responses.question_id, Responses.answer_text, Users.name, 
@@ -410,9 +411,10 @@ def give_grade():
 
     if request.method == 'POST':
         with engine.connect() as conn:
+            # Update grades
             for response in responses:
                 student_id = response['student_id']
-                grade = request.form.get(f'grade_{student_id}')  
+                grade = request.form.get(f'grade_{student_id}')  # Fixed form input to match student_id
 
                 if grade:  # Only update if a new grade is entered
                     conn.execute(
@@ -429,7 +431,7 @@ def give_grade():
 
     return render_template('give_grades.html', responses=responses, test_id=test_id)
 
-    
+
 
 
 
