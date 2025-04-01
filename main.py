@@ -342,48 +342,93 @@ def submit_test(test_id):
 
     return redirect(url_for('test_page')) 
 
-@app.route('/grade', methods=['GET', 'POST'])
-def test_grade():
+@app.route('/grade', methods=['GET'])
+def view_grades():
     user = get_logged_in_user()
     
-    if user['role'] == 'Teacher':
-        with engine.connect() as conn:
+    if not user:
+        return render_template('grades.html', message='You must log in')
+
+    with engine.connect() as conn:
+        if user['role'] == 'Teacher':
             tests = conn.execute(
-                text('SELECT * FROM Tests WHERE teacher_id = :teacher_id'),
+                text("""
+                    SELECT * FROM Tests WHERE teacher_id = :teacher_id
+                """),
                 {'teacher_id': user['user_id']}
             ).mappings().all()
-              
-        return render_template('grades.html', tests=tests, user=user)  
-    
-    elif user['role'] == 'Student':
-        with engine.connect() as conn:
-            student_grade = conn.execute(
-                text('SELECT * FROM grades WHERE student_id = :student_id'),
+            
+            return render_template('grades.html', tests=tests, user=user)
+
+        elif user['role'] == 'Student':
+            student_grades = conn.execute(
+                text("""
+                    SELECT Tests.test_id, Tests.test_id, Questions.question_text, Responses.question_id, 
+                           Responses.answer_text, Results.grade
+                    FROM Responses
+                    JOIN Tests ON Responses.test_id = Tests.test_id
+                    JOIN Questions ON Responses.question_id = Questions.question_id
+                    LEFT JOIN Results ON Responses.student_id = Results.student_id 
+                                     AND Responses.test_id = Results.test_id
+                    WHERE Responses.student_id = :student_id
+                    ORDER BY Tests.test_id, Responses.question_id
+                """),
                 {'student_id': user['user_id']}
             ).mappings().all()
             
-        return render_template('grades.html', student_grade=student_grade)
-    
-    elif not user:
-        return render_template('grades.html', test='You must log in')
-    
-    else:
-        return render_template('grades.html', test='An error occured')
-                
+            return render_template('grades.html', student_grades=student_grades)
+
+    return render_template('grades.html', message="An error occurred")
+
+
 
 @app.route('/give-grade', methods=['GET', 'POST'])
 def give_grade():
     user = get_logged_in_user()
-    test_id = request.args.get('test_id')  
     
+    if not user or user['role'] != 'Teacher':
+        return "Access Denied", 403
+
+    test_id = request.args.get('test_id')
+    if not test_id:
+        return "No test ID provided", 400
+
     with engine.connect() as conn:
         responses = conn.execute(
-            text('SELECT * FROM responses WHERE test_id = :test_id ORDER BY student_id'),
-            {'test_id': test_id, 'student_id': user['user_id']}
+            text("""
+                SELECT Responses.student_id, Responses.test_id, Responses.question_id, Responses.answer_text, Users.name, 
+                       Results.grade
+                FROM Responses
+                JOIN Users ON Responses.student_id = Users.user_id
+                LEFT JOIN Results ON Responses.student_id = Results.student_id 
+                                  AND Responses.test_id = Results.test_id
+                WHERE Responses.test_id = :test_id
+                ORDER BY Responses.student_id, Responses.question_id
+            """),
+            {'test_id': test_id}
         ).mappings().all()
-        
-        
-        return render_template('give_grades.html', responses=responses)
+
+    if request.method == 'POST':
+        with engine.connect() as conn:
+            for response in responses:
+                student_id = response['student_id']
+                grade = request.form.get(f'grade_{student_id}')  
+
+                if grade:  # Only update if a new grade is entered
+                    conn.execute(
+                        text("""
+                            INSERT INTO Results (student_id, test_id, grade)
+                            VALUES (:student_id, :test_id, :grade)
+                            ON DUPLICATE KEY UPDATE grade = :grade
+                        """),
+                        {'student_id': student_id, 'test_id': test_id, 'grade': grade}
+                    )
+            conn.commit()
+
+        return redirect(url_for('give_grade', test_id=test_id))
+
+    return render_template('give_grades.html', responses=responses, test_id=test_id)
+
     
 
 
