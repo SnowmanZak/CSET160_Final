@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block body %}
+<h1>Test Page</h1>
+
+{% if user['role'] == 'Teacher' %}
+    <form method="POST">
+        <button type="submit">Create Test</button>
+    </form>
+    <h2>Your Tests</h2>
+{% else %}
+    <h2>Available Tests</h2>
+{% endif %}
+
+<ul>
+    {% for test in tests %}
+        <li>{{ test['test_id'] }} - Test #{{ test['test_id'] }}</li>
+        
+        {% if user['role'] == 'Teacher' %}
+            <a href="{{ url_for('create_test', test_id=test['test_id']) }}">Edit Test</a>
+            <form method="POST" action="{{ url_for('delete_test', test_id=test['test_id']) }}">
+                <button type="submit">Delete Test</button>
+            </form>
+        {% else %}
+            <!-- For students, replace Edit Test with Take Test -->
+            <a href="{{ url_for('take_test', test_id=test['test_id']) }}">Take Test</a>
+        {% endif %}
+    {% endfor %}
+</ul>
+
+{% endblock %}

@@ -1,0 +1,10 @@
+<h2>Edit Question</h2>
+
+<form method="POST">
+    <label for="question_text">Edit Question Text:</label>
+    <textarea id="question_text" name="question_text" rows="4" cols="50" required>{{ question['question_text'] }}</textarea>
+    <button type="submit">Update Question</button>
+</form>
+
+<a href="{{ url_for('create_test', test_id=question['test_id']) }}">Back to Test</a>
+

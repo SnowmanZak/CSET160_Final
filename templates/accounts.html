@@ -1,0 +1,34 @@
+<style>
+
+    
+</style>
+{% extends 'base.html' %}
+
+{% block body %}
+<label for="role">Filter by Role:</label>
+<select name="role" id="role" onchange="filterAccounts()">
+    <option value="all" {% if selected_role == 'all' %}selected{% endif %}>All Accounts</option>
+    <option value="teacher" {% if selected_role == 'teacher' %}selected{% endif %}>Teacher</option>
+    <option value="student" {% if selected_role == 'student' %}selected{% endif %}>Student</option>
+</select>
+
+<div id="accounts-list">
+    {% for account in accounts %}    
+    <ul style="list-style-type: none;">
+        <li>ID = {{ account[0] }}</li>
+        <li>Name = {{ account[1] }}</li>
+        <li>Username = {{ account[2] }}</li>
+        <li>Password = {{ '*' * account[3]|length }}</li> 
+        <li>Role = {{ account[4] }}</li>
+    </ul>
+    {% endfor %}
+</div>
+
+<script>
+function filterAccounts() {
+    var role = document.getElementById("role").value;
+    window.location.href = "/accounts?role=" + role;  
+}
+</script>
+
+{% endblock %}

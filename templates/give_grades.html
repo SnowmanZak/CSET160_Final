@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block body %}
+    <h1>Grade Student Responses</h1>
+
+    {% if responses %}
+        <form method="POST">
+            <table border="1">
+                <tr>
+                    <th>Student</th>
+                    <th>Question ID</th>
+                    <th>Answer</th>
+                    <th>Current Grade</th>
+                    <th>New Grade</th>
+                </tr>
+                {% for response in responses %}
+                <tr>
+                    <td>{{ response.name }}</td>
+                    <td>{{ response.question_id }}</td>
+                    <td>{{ response.answer_text }}</td>
+                    <td>{{ response.grade if response.grade is not none else "Not Graded" }}</td>
+                    <td>
+                        <input type="hidden" name="student_id" value="{{ response.student_id }}">
+                        <input type="number" name="grade_{{ response.student_id }}" min="0">
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            <button type="submit">Submit Grades</button>
+        </form>
+    
+    {% else %}
+        <p>No responses found.</p>
+    {% endif %}
+
+{% endblock %}
